@@ -1,4 +1,4 @@
-# HAproxy-load-balancer 2
+# HAproxy2-load-balancer
 
 An Ansible role that install/manage haproxy-load-balancer to CENTOS 7/8, Rocky9 and Ubuntu.[link](hhttps://www.haproxy.com/)
 
