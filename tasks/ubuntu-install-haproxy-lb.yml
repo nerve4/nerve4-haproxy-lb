@@ -1,0 +1,17 @@
+---
+# tasks - ubuntu-install-haproxy-lb.yml for nerve4-haproxy-lb
+
+- name: Add specified repository into sources list
+  ansible.builtin.apt_repository:
+    repo: "{{ ubuntu_haproxy_repo }}"
+
+- name: Install haproxy-pkgs on Ubuntu
+  ansible.builtin.apt: 
+    name: "{{ item }}"
+    install_recommends: false
+    state: present
+  loop: "{{ ubuntu_pkgs }}"
+
+- name: Install haproxy-lb on Ubuntu
+  ansible.builtin.apt: 
+    name: "{{ ubuntu_hap_pkg }}"
