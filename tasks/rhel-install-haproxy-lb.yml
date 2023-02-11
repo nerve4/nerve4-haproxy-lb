@@ -1,0 +1,87 @@
+---
+# tasks - rhel-install-haproxy-lb.yml for nerve4-haproxy-lb
+
+- name: Ensure group "haproxy" exists with correct gid
+  ansible.builtin.group:
+    name: "{{ haproxy_user_group }}"
+    state: present
+    gid: "{{ haproxy_gid }}"
+
+- name: Add the user 'haproxy' with a specific uid and a primary group of 'haproxy'
+  ansible.builtin.user:
+    name: "{{ haproxy_user_name }}"
+    comment: haproxy user
+    uid: "{{ haproxy_uid }}"
+    group: "{{ haproxy_user_group }}"
+
+- name: Install haproxy-lb on Rhel 7.x
+  ansible.builtin.yum:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ rhel_pkgs }}"
+  when:
+    - ansible_distribution_major_version == "7"
+
+- name: Install haproxy-lb on Rhel 8.x / Rocky Linux
+  ansible.builtin.dnf:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ rhel_pkgs }}"
+  when:
+    (ansible_distribution_major_version == "8") or
+    (ansible_distribution in "Rocky")
+
+- name: Download HAproxy-LB binary to local folder
+  ansible.builtin.get_url:
+    url: "http://www.haproxy.org/download/{{ haproxylb_version }}/src/haproxy-{{ haproxylb_sub_version }}.tar.gz"
+    dest: "/tmp/haproxy-{{ haproxylb_sub_version }}.tar.gz"
+
+- name: unpack HAproxy-LB binaries
+  ansible.builtin.unarchive:
+    src: "/tmp/haproxy-{{ haproxylb_sub_version }}.tar.gz"
+    dest: "/tmp"
+    remote_src: yes
+
+- name: Compile HAproxy
+  ansible.builtin.shell: "{{ item }}"
+  args:
+    chdir: "/tmp/haproxy-{{ haproxylb_sub_version }}"
+  with_items:
+    - make -j $(nproc) TARGET=linux-glibc USE_ZLIB=1 USE_PCRE=1 USE_SYSTEMD=1
+
+- name: Run make
+  ansible.builtin.command: "make install"
+  args:
+    chdir: "/tmp/haproxy-{{ haproxylb_sub_version }}"
+
+- name: Copy a "haproxy" file on the remote machine
+  ansible.builtin.copy:
+    src: /usr/local/sbin/haproxy
+    dest: /usr/sbin/haproxy
+    remote_src: yes
+    mode: '0644'
+
+- name: Create a directory if it does not exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0644'
+  loop: "{{ rhel_haproxy_dirs }}"
+
+- name: Upload HAproxy-LB systemd file
+  become: yes
+  ansible.builtin.template:
+    src: haproxy.svc.j2
+    dest: /etc/systemd/system/haproxy.service
+    mode: '0644'
+
+- name: Check leftover .tar.gz in /tmp
+  stat:
+    path: "{{ haproxy_downloaded_pkgs }}"
+  register: result
+
+- name: Delete old file if it's exists
+  ansible.builtin.file:
+    path: "{{ haproxy_downloaded_pkgs }}"
+    state: absent
+  when: result.stat.islnk is defined

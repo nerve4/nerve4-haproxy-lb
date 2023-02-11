@@ -1,0 +1,14 @@
+---
+# tasks - main.yml for nerve4-haproxy-lb
+
+- include: rhel-install-haproxy-lb.yml
+  when: 
+    (ansible_distribution == "CentOS") or
+    (ansible_distribution == "RedHat") or
+    (ansible_distribution in "Rocky")
+
+- include: ubuntu-install-haproxy-lb.yml
+  when: 
+    - ansible_distribution == "Ubuntu"
+
+- include: run-config-haproxy-lb.yml

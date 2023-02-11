@@ -1,0 +1,30 @@
+---
+# tasks - run-config-haproxy-lb.yml for nerve4-haproxy-lb
+
+- name: Upload HAproxy-LB Layer 4 Config file
+  become: yes
+  ansible.builtin.template:
+    src: haproxy.layer4.j2
+    dest: "{{ haproxy_cfg_path }}/haproxy.cfg"
+    owner: root
+    group: root
+    mode: '0644'
+  when:
+    - lb_layer4_var is defined and lb_layer4_var
+
+- name: Upload HAproxy-LB Layer 7 Config file
+  become: yes
+  ansible.builtin.template:
+    src: haproxy.layer7.j2
+    dest: "{{ haproxy_cfg_path }}/haproxy.cfg"
+    owner: root
+    group: root
+    mode: '0644'
+  when:
+    - lb_layer7_var is defined and lb_layer7_var
+
+- name: Activate / Deactivate HAproxy-LB service
+  ansible.builtin.systemd:
+    name: "haproxy"
+    state: "{{ haproxylb_svc_state }}"
+    enabled: "{{ haproxylb_svc_enable }}"
